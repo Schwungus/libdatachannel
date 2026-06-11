@@ -247,7 +247,7 @@ if(NOT NO_MEDIA)
     list(APPEND TESTS_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/test/rtcp_app.cpp)
 endif()
 
-set(TESTS_HEADERS 
+set(TESTS_HEADERS
 	${CMAKE_CURRENT_SOURCE_DIR}/test/test.hpp
 )
 
@@ -346,15 +346,6 @@ else()
 		target_compile_definitions(usrsctp PUBLIC -DSCTP_STDINT_INCLUDE=<stdint.h>)
 	endif()
 	add_library(Usrsctp::Usrsctp ALIAS usrsctp)
-
-	if(INSTALL_DEPS_LIBS)
-		install(TARGETS usrsctp EXPORT LibDataChannelTargets)
-		# Fix directories
-		set_target_properties(usrsctp PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "")
-		target_include_directories(usrsctp INTERFACE
-			$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/deps/usrsctp/usrsctplib>
-			$<INSTALL_INTERFACE:>)
-	endif()
 endif()
 
 target_include_directories(datachannel PUBLIC
@@ -414,9 +405,6 @@ else()
 	else()
 		if(NOT TARGET srtp2)
 			add_subdirectory(deps/libsrtp EXCLUDE_FROM_ALL)
-			if(INSTALL_DEPS_LIBS)
-				install(TARGETS srtp2 EXPORT LibDataChannelTargets)
-			endif()
 		endif()
 		target_compile_definitions(datachannel PRIVATE RTC_SYSTEM_SRTP=0)
 		target_compile_definitions(datachannel-static PRIVATE RTC_SYSTEM_SRTP=0)
@@ -494,9 +482,6 @@ else()
 		target_link_libraries(datachannel-static PRIVATE LibJuice::LibJuice)
 	else()
 		add_subdirectory(deps/libjuice EXCLUDE_FROM_ALL)
-		if(INSTALL_DEPS_LIBS)
-			install(TARGETS juice EXPORT LibDataChannelTargets)
-		endif()
 		target_compile_definitions(datachannel PRIVATE RTC_SYSTEM_JUICE=0)
 		target_compile_definitions(datachannel-static PRIVATE RTC_SYSTEM_JUICE=0)
 		target_link_libraries(datachannel PRIVATE LibJuice::LibJuice)
@@ -530,29 +515,6 @@ if(WARNINGS_AS_ERRORS)
 	endif()
 endif()
 
-install(TARGETS datachannel EXPORT LibDataChannelTargets
-	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-)
-
-if(MSVC AND BUILD_SHARED_LIBS)
-    install(FILES $<TARGET_PDB_FILE:datachannel>
-        DESTINATION ${CMAKE_INSTALL_BINDIR} OPTIONAL)
-endif()
-
-install(FILES ${LIBDATACHANNEL_HEADERS}
-	DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/rtc
-)
-
-# Export targets
-install(
-	EXPORT LibDataChannelTargets
-	FILE LibDataChannelTargets.cmake
-	NAMESPACE LibDataChannel::
-	DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/LibDataChannel
-)
-
 include(CMakePackageConfigHelpers)
 configure_package_config_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/cmake/LibDataChannelConfig.cmake.in
@@ -566,11 +528,6 @@ write_basic_package_version_file(
     VERSION ${PROJECT_VERSION}
     COMPATIBILITY SameMajorVersion
 )
-# Export config and version files
-install(FILES
-	${CMAKE_BINARY_DIR}/LibDataChannelConfig.cmake
-	${CMAKE_BINARY_DIR}/LibDataChannelConfigVersion.cmake
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/LibDataChannel)
 
 # Tests
 if(NOT NO_TESTS)
