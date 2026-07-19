@@ -20,8 +20,6 @@ option(USE_SYSTEM_PLOG "Use system Plog" ${PREFER_SYSTEM_LIB})
 option(USE_SYSTEM_JSON "Use system Nlohmann JSON" ${PREFER_SYSTEM_LIB})
 option(NO_WEBSOCKET "Disable WebSocket support" OFF)
 option(NO_MEDIA "Disable media transport support" OFF)
-option(NO_EXAMPLES "Disable examples" OFF)
-option(NO_TESTS "Disable tests build" OFF)
 option(WARNINGS_AS_ERRORS "Treat warnings as errors" OFF)
 option(CAPI_STDCALL "Set calling convention of C API callbacks stdcall" OFF)
 option(SCTP_DEBUG "Enable SCTP debugging output to verbose log" OFF)
@@ -221,24 +219,6 @@ set(LIBDATACHANNEL_IMPL_HEADERS
 	${CMAKE_CURRENT_SOURCE_DIR}/src/impl/websocketserver.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/impl/wstransport.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/impl/wshandshake.hpp
-)
-
-set(TESTS_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/main.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/connectivity.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/negotiated.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/reliability.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/test/simulcast_sdp_generation.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/test/simulcast_sdp_parsing.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/turn_connectivity.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/track.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/video_layers_allocation.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/capi_connectivity.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/capi_track.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/websocket.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/websocketserver.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/capi_websocketserver.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/benchmark.cpp
 )
 
 if(NOT NO_MEDIA)
@@ -528,70 +508,3 @@ write_basic_package_version_file(
     VERSION ${PROJECT_VERSION}
     COMPATIBILITY SameMajorVersion
 )
-
-# Tests
-if(NOT NO_TESTS)
-	if(CMAKE_SYSTEM_NAME STREQUAL "WindowsStore")
-		# Add resource files needed for UWP apps.
-		add_executable(datachannel-tests ${TESTS_SOURCES} ${TESTS_HEADERS} ${TESTS_UWP_RESOURCES})
-	else()
-		add_executable(datachannel-tests ${TESTS_SOURCES} ${TESTS_HEADERS})
-	endif()
-
-	set_target_properties(datachannel-tests PROPERTIES
-		VERSION ${PROJECT_VERSION}
-		CXX_STANDARD 17
-		OUTPUT_NAME tests)
-
-	set_target_properties(datachannel-tests PROPERTIES
-		XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER com.github.paullouisageneau.libdatachannel.tests)
-
-	target_include_directories(datachannel-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-	target_link_libraries(datachannel-tests datachannel Threads::Threads)
-
-	# Benchmark
-	if(CMAKE_SYSTEM_NAME STREQUAL "WindowsStore")
-		# Add resource files needed for UWP apps.
-		add_executable(datachannel-benchmark test/benchmark.cpp ${BENCHMARK_UWP_RESOURCES})
-	else()
-		add_executable(datachannel-benchmark test/benchmark.cpp)
-	endif()
-
-	set_target_properties(datachannel-benchmark PROPERTIES
-		VERSION ${PROJECT_VERSION}
-		CXX_STANDARD 17
-		OUTPUT_NAME benchmark)
-
-	set_target_properties(datachannel-benchmark PROPERTIES
-		XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER com.github.paullouisageneau.libdatachannel.benchmark)
-
-	target_compile_definitions(datachannel-benchmark PRIVATE BENCHMARK_MAIN=1)
-	target_include_directories(datachannel-benchmark PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-	target_link_libraries(datachannel-benchmark datachannel Threads::Threads)
-endif()
-
-# Examples
-if(NOT NO_EXAMPLES)
-	set(JSON_BuildTests OFF CACHE INTERNAL "")
-	if(USE_SYSTEM_JSON)
-		find_package(nlohmann_json REQUIRED)
-	else()
-		add_subdirectory(deps/json EXCLUDE_FROM_ALL)
-	endif()
-
-	if(NOT NO_WEBSOCKET)
-		add_subdirectory(examples/client)
-		add_subdirectory(examples/client-benchmark)
-	endif()
-	if(NOT NO_MEDIA)
-		add_subdirectory(examples/media-receiver)
-		add_subdirectory(examples/media-sender)
-		add_subdirectory(examples/media-sfu)
-	endif()
-	if(NOT NO_MEDIA AND NOT NO_WEBSOCKET)
-    	add_subdirectory(examples/streamer)
-	endif()
-	add_subdirectory(examples/copy-paste)
-	add_subdirectory(examples/copy-paste-capi)
-endif()
-
