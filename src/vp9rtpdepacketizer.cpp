@@ -68,7 +68,7 @@ message_ptr VP9RtpDepacketizer::reassemble(message_buffer &buffer) {
 	const uint8_t bitL = 0b00100000;
 	const uint8_t bitF = 0b00010000;
 	const uint8_t bitB = 0b00001000;
-	//const uint8_t bitE = 0b00000100;
+	// const uint8_t bitE = 0b00000100;
 	const uint8_t bitV = 0b00000010;
 
 	// PictureID byte
@@ -90,7 +90,7 @@ message_ptr VP9RtpDepacketizer::reassemble(message_buffer &buffer) {
 	uint16_t nextSeqNumber = firstRtpHeader->seqNumber();
 
 	binary frame;
-	std::vector<std::pair<const std::byte *, size_t>> payloads;
+	std::vector<std::pair<const rtc::byte *, size_t>> payloads;
 	bool continuousSequence = false;
 	for (const auto &packet : buffer) {
 		auto rtpHeader = reinterpret_cast<const rtc::RtpHeader *>(packet->data());
@@ -107,12 +107,12 @@ message_ptr VP9RtpDepacketizer::reassemble(message_buffer &buffer) {
 		auto rtpHeaderSize = rtpHeader->getSize() + rtpHeader->getExtensionHeaderSize();
 		auto paddingSize = 0;
 		if (rtpHeader->padding())
-			paddingSize = std::to_integer<uint8_t>(packet->back());
+			paddingSize = packet->back();
 
 		if (packet->size() <= rtpHeaderSize + paddingSize)
 			continue; // Empty payload
 
-		const std::byte *payloadData = packet->data() + rtpHeaderSize;
+		const rtc::byte *payloadData = packet->data() + rtpHeaderSize;
 		size_t payloadSize = packet->size() - rtpHeaderSize - paddingSize;
 
 		if (payloadSize < 1)
@@ -120,13 +120,13 @@ message_ptr VP9RtpDepacketizer::reassemble(message_buffer &buffer) {
 
 		// Parse VP9 payload descriptor (RFC 9628, Section 4.2)
 		size_t descriptorSize = 1;
-		uint8_t firstByte = std::to_integer<uint8_t>(payloadData[0]);
+		uint8_t firstByte = payloadData[0];
 
 		// PictureID (conditional: I=1)
 		if (firstByte & bitI) {
 			if (payloadSize < descriptorSize + 1)
 				continue;
-			uint8_t pictureIdByte = std::to_integer<uint8_t>(payloadData[descriptorSize]);
+			uint8_t pictureIdByte = payloadData[descriptorSize];
 			descriptorSize++;
 			if (pictureIdByte & bitM) { // 15-bit extended PictureID
 				if (payloadSize < descriptorSize + 1)
@@ -154,7 +154,7 @@ message_ptr VP9RtpDepacketizer::reassemble(message_buffer &buffer) {
 			for (int i = 0; i < maxRefPics; i++) {
 				if (payloadSize < descriptorSize + 1)
 					break;
-				uint8_t refByte = std::to_integer<uint8_t>(payloadData[descriptorSize]);
+				uint8_t refByte = payloadData[descriptorSize];
 				descriptorSize++;
 				if (!(refByte & bitN)) // N=0 means last reference index
 					break;
@@ -165,12 +165,12 @@ message_ptr VP9RtpDepacketizer::reassemble(message_buffer &buffer) {
 		if (firstByte & bitV) {
 			if (payloadSize < descriptorSize + 1)
 				continue;
-			uint8_t ssByte = std::to_integer<uint8_t>(payloadData[descriptorSize]);
+			uint8_t ssByte = payloadData[descriptorSize];
 			descriptorSize++;
 
-			int numSpatialLayers = (ssByte >> 5) + 1; // N_S + 1
+			int numSpatialLayers = (ssByte >> 5) + 1;      // N_S + 1
 			bool resolutionPresent = (ssByte >> 4) & 0x01; // Y bit
-			bool pgPresent = (ssByte >> 3) & 0x01; // G bit
+			bool pgPresent = (ssByte >> 3) & 0x01;         // G bit
 
 			// Resolution data: WIDTH (2 bytes) + HEIGHT (2 bytes) per spatial layer
 			if (resolutionPresent) {
@@ -184,7 +184,7 @@ message_ptr VP9RtpDepacketizer::reassemble(message_buffer &buffer) {
 			if (pgPresent) {
 				if (payloadSize < descriptorSize + 1)
 					continue;
-				uint8_t numPictureGroups = std::to_integer<uint8_t>(payloadData[descriptorSize]);
+				uint8_t numPictureGroups = payloadData[descriptorSize];
 				descriptorSize++;
 
 				bool ssTruncated = false;
@@ -193,7 +193,7 @@ message_ptr VP9RtpDepacketizer::reassemble(message_buffer &buffer) {
 						ssTruncated = true;
 						break;
 					}
-					uint8_t pgByte = std::to_integer<uint8_t>(payloadData[descriptorSize]);
+					uint8_t pgByte = payloadData[descriptorSize];
 					descriptorSize++;
 					int numRefs = (pgByte >> 2) & 0x03; // R field
 					if (payloadSize < descriptorSize + static_cast<size_t>(numRefs)) {
@@ -221,8 +221,7 @@ message_ptr VP9RtpDepacketizer::reassemble(message_buffer &buffer) {
 
 				if (rtpHeader->marker())
 					frame.insert(frame.end(), payloadData, payloadData + payloadSize);
-			}
-			else if ((firstByte & bitB) && rtpHeader->marker()) {
+			} else if ((firstByte & bitB) && rtpHeader->marker()) {
 				// Single-packet frame at start of buffer
 				frame.insert(frame.end(), payloadData, payloadData + payloadSize);
 			}

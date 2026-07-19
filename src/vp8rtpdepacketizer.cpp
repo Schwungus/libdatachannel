@@ -53,7 +53,7 @@ message_ptr VP8RtpDepacketizer::reassemble(message_buffer &buffer) {
 
 	// First byte
 	const uint8_t X = 0b10000000;
-	//const uint8_t N = 0b00100000;
+	// const uint8_t N = 0b00100000;
 	const uint8_t S = 0b00010000;
 
 	// Extension byte
@@ -75,7 +75,7 @@ message_ptr VP8RtpDepacketizer::reassemble(message_buffer &buffer) {
 	uint16_t nextSeqNumber = firstRtpHeader->seqNumber();
 
 	binary frame;
-	std::vector<std::pair<const std::byte*, size_t>> payloads;
+	std::vector<std::pair<const rtc::byte *, size_t>> payloads;
 	bool continuousSequence = false;
 	for (const auto &packet : buffer) {
 		auto rtpHeader = reinterpret_cast<const rtc::RtpHeader *>(packet->data());
@@ -92,31 +92,31 @@ message_ptr VP8RtpDepacketizer::reassemble(message_buffer &buffer) {
 		auto rtpHeaderSize = rtpHeader->getSize() + rtpHeader->getExtensionHeaderSize();
 		auto paddingSize = 0;
 		if (rtpHeader->padding())
-			paddingSize = std::to_integer<uint8_t>(packet->back());
+			paddingSize = packet->back();
 
 		if (packet->size() <= rtpHeaderSize + paddingSize)
 			continue; // Empty payload
 
-		const std::byte *payloadData = packet->data() + rtpHeaderSize;
+		const rtc::byte *payloadData = packet->data() + rtpHeaderSize;
 		size_t payloadSize = packet->size() - rtpHeaderSize - paddingSize;
 
 		if (payloadSize < 1)
 			continue;
 
 		size_t descriptorSize = 1;
-		uint8_t firstByte = std::to_integer<uint8_t>(payloadData[0]);
+		uint8_t firstByte = payloadData[0];
 
 		if (firstByte & X) {
 			if (payloadSize < descriptorSize + 1)
 				continue;
 
-			uint8_t extensionByte = std::to_integer<uint8_t>(payloadData[descriptorSize]);
+			uint8_t extensionByte = payloadData[descriptorSize];
 			descriptorSize++;
 
 			if (extensionByte & I) {
 				if (payloadSize < descriptorSize + 1)
 					continue;
-				uint8_t pictureIdByte = std::to_integer<uint8_t>(payloadData[descriptorSize]);
+				uint8_t pictureIdByte = payloadData[descriptorSize];
 				descriptorSize++;
 				if (pictureIdByte & M) { // M bit, 15-bit PictureID
 					if (payloadSize < descriptorSize + 1)
@@ -166,7 +166,7 @@ message_ptr VP8RtpDepacketizer::reassemble(message_buffer &buffer) {
 			payloads.push_back(std::make_pair(payloadData, payloadSize));
 	}
 
-	if(frame.empty()) {
+	if (frame.empty()) {
 		// No partition was recoverable
 		return nullptr;
 	}

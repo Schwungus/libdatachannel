@@ -61,7 +61,7 @@ message_ptr H265RtpDepacketizer::reassemble(message_buffer &buffer) {
 		auto rtpHeaderSize = rtpHeader->getSize() + rtpHeader->getExtensionHeaderSize();
 		auto paddingSize = 0;
 		if (rtpHeader->padding())
-			paddingSize = std::to_integer<uint8_t>(packet->back());
+			paddingSize = packet->back();
 
 		if (packet->size() <= rtpHeaderSize + paddingSize)
 			continue; // Empty payload
@@ -71,15 +71,13 @@ message_ptr H265RtpDepacketizer::reassemble(message_buffer &buffer) {
 			throw std::runtime_error("Truncated H265 NAL unit");
 
 		auto nalUnitHeader =
-		    H265NalUnitHeader{std::to_integer<uint8_t>(packet->at(rtpHeaderSize)),
-		                      std::to_integer<uint8_t>(packet->at(rtpHeaderSize + 1))};
+		    H265NalUnitHeader{packet->at(rtpHeaderSize), packet->at(rtpHeaderSize + 1)};
 
 		if (nalUnitHeader.unitType() == naluTypeFU) {
 			if (payloadSize <= 2)
 				continue; // Empty FU
 
-			auto nalUnitFragmentHeader =
-			    H265NalUnitFragmentHeader{std::to_integer<uint8_t>(packet->at(rtpHeaderSize + 2))};
+			auto nalUnitFragmentHeader = H265NalUnitFragmentHeader{packet->at(rtpHeaderSize + 2)};
 
 			// RFC 7798: When set to 1, the S bit indicates the start of a fragmented
 			// NAL unit, i.e., the first byte of the FU payload is also the first byte of
@@ -114,8 +112,8 @@ message_ptr H265RtpDepacketizer::reassemble(message_buffer &buffer) {
 				auto offset = rtpHeaderSize + 2;
 
 				while (offset + 2 < packet->size() - paddingSize) {
-					auto naluSize = std::to_integer<uint16_t>(packet->at(offset)) << 8 |
-					                std::to_integer<uint16_t>(packet->at(offset + 1));
+					auto naluSize = static_cast<uint16_t>(packet->at(offset)) << 8 |
+					                static_cast<uint16_t>(packet->at(offset + 1));
 
 					offset += 2;
 

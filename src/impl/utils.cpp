@@ -87,9 +87,9 @@ string base64_encode(const binary &data) {
 	out.reserve(3 * ((data.size() + 3) / 4));
 	int i = 0;
 	while (data.size() - i >= 3) {
-		auto d0 = to_integer<uint8_t>(data[i]);
-		auto d1 = to_integer<uint8_t>(data[i + 1]);
-		auto d2 = to_integer<uint8_t>(data[i + 2]);
+		auto d0 = data[i];
+		auto d1 = data[i + 1];
+		auto d2 = data[i + 2];
 		out += tab[d0 >> 2];
 		out += tab[((d0 & 3) << 4) | (d1 >> 4)];
 		out += tab[((d1 & 0x0F) << 2) | (d2 >> 6)];
@@ -99,13 +99,13 @@ string base64_encode(const binary &data) {
 
 	int left = int(data.size() - i);
 	if (left) {
-		auto d0 = to_integer<uint8_t>(data[i]);
+		auto d0 = data[i];
 		out += tab[d0 >> 2];
 		if (left == 1) {
 			out += tab[(d0 & 3) << 4];
 			out += '=';
 		} else { // left == 2
-			auto d1 = to_integer<uint8_t>(data[i + 1]);
+			auto d1 = data[i + 1];
 			out += tab[((d0 & 3) << 4) | (d1 >> 4)];
 			out += tab[(d1 & 0x0F) << 2];
 		}

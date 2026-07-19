@@ -56,7 +56,7 @@
 
 namespace rtc {
 
-using std::byte;
+using byte = std::uint8_t;
 using std::nullopt;
 using std::optional;
 using std::shared_ptr;

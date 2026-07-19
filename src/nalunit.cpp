@@ -67,7 +67,7 @@ std::vector<NalUnitFragmentA> NalUnit::generateFragments(size_t maxFragmentSize)
 }
 
 NalUnitStartSequenceMatch NalUnit::StartSequenceMatchSucc(NalUnitStartSequenceMatch match,
-                                                          std::byte _byte, Separator separator) {
+                                                          rtc::byte _byte, Separator separator) {
 	assert(separator != Separator::Length);
 	auto byte = (uint8_t)_byte;
 	auto detectShort =

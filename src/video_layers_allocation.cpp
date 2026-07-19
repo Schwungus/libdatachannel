@@ -17,23 +17,23 @@ namespace rtc {
 namespace {
 
 // Encode unsigned integer as LEB128
-void writeLeb128(binary& out, uint32_t value) {
+void writeLeb128(binary &out, uint32_t value) {
 	do {
 		uint8_t byte = value & 0x7F;
 		value >>= 7;
 		if (value != 0) {
-			byte |= 0x80;  // More bytes follow
+			byte |= 0x80; // More bytes follow
 		}
-		out.push_back(std::byte(byte));
+		out.push_back(rtc::byte(byte));
 	} while (value != 0);
 }
 
 // Compute spatial layer bitmask for a stream
 // Returns bitmask where bit i is set if spatial layer i is present
-uint8_t computeSpatialLayerBitmask(const VideoLayersAllocation::RtpStream& stream) {
+uint8_t computeSpatialLayerBitmask(const VideoLayersAllocation::RtpStream &stream) {
 	uint8_t bitmask = 0;
 	for (size_t i = 0; i < stream.spatialLayers.size() && i < 4; ++i) {
-		const auto& spatialLayer = stream.spatialLayers[i];
+		const auto &spatialLayer = stream.spatialLayers[i];
 		if (!spatialLayer.targetBitratesKbps.empty()) {
 			bitmask |= (1 << i);
 		}
@@ -50,7 +50,7 @@ binary VideoLayersAllocation::generate(uint8_t streamIndex) const {
 	}
 
 	binary result;
-	result.reserve(60);  // Pre-allocate reasonable size
+	result.reserve(60); // Pre-allocate reasonable size
 
 	// Compute spatial layer bitmasks for all streams
 	std::vector<uint8_t> slBitmasks;
@@ -79,7 +79,7 @@ binary VideoLayersAllocation::generate(uint8_t streamIndex) const {
 	uint8_t slBm = allSameBitmask ? slBitmasks[0] : 0;
 
 	uint8_t headerByte = (rid << 6) | (ns << 4) | (slBm & 0x0F);
-	result.push_back(std::byte(headerByte));
+	result.push_back(rtc::byte(headerByte));
 
 	// If sl_bm == 0, write per-stream spatial layer bitmasks
 	// Each slX_bm is 4 bits, packed and zero-padded to byte boundary
@@ -89,22 +89,22 @@ binary VideoLayersAllocation::generate(uint8_t streamIndex) const {
 			if (i + 1 < numStreams) {
 				byte |= (slBitmasks[i + 1] & 0x0F);
 			}
-			result.push_back(std::byte(byte));
+			result.push_back(rtc::byte(byte));
 		}
 	}
 
 	// Temporal layer counts: 2 bits per active spatial layer across all streams
 	// Value is (num_temporal_layers - 1), so 0 = 1 TL, 1 = 2 TL, 2 = 3 TL, 3 = 4 TL
 	uint8_t tempByte = 0;
-	int bitPos = 6;  // Start from MSB, 2 bits at a time
+	int bitPos = 6; // Start from MSB, 2 bits at a time
 
 	for (size_t streamIdx = 0; streamIdx < numStreams; ++streamIdx) {
 		uint8_t bitmask = allSameBitmask ? slBm : slBitmasks[streamIdx];
-		const auto& stream = rtpStreams[streamIdx];
+		const auto &stream = rtpStreams[streamIdx];
 
 		for (size_t slIdx = 0; slIdx < stream.spatialLayers.size() && slIdx < 4; ++slIdx) {
 			if (bitmask & (1 << slIdx)) {
-				const auto& sl = stream.spatialLayers[slIdx];
+				const auto &sl = stream.spatialLayers[slIdx];
 				const auto numTemporal = std::min<size_t>(sl.targetBitratesKbps.size(), 4u);
 				const auto tlValue = uint8_t((numTemporal - 1) & 0x03);
 
@@ -112,7 +112,7 @@ binary VideoLayersAllocation::generate(uint8_t streamIndex) const {
 				bitPos -= 2;
 
 				if (bitPos < 0) {
-					result.push_back(std::byte(tempByte));
+					result.push_back(rtc::byte(tempByte));
 					tempByte = 0;
 					bitPos = 6;
 				}
@@ -122,18 +122,18 @@ binary VideoLayersAllocation::generate(uint8_t streamIndex) const {
 
 	// Flush remaining temporal layer bits if any
 	if (bitPos != 6) {
-		result.push_back(std::byte(tempByte));
+		result.push_back(rtc::byte(tempByte));
 	}
 
 	// Target bitrates in kbps, LEB128 encoded
 	// Order: for each stream, for each spatial layer (by id), for each temporal layer
 	for (size_t streamIdx = 0; streamIdx < numStreams; ++streamIdx) {
 		const auto bitmask = allSameBitmask ? slBm : slBitmasks[streamIdx];
-		const auto& stream = rtpStreams[streamIdx];
+		const auto &stream = rtpStreams[streamIdx];
 
 		for (size_t slIdx = 0; slIdx < stream.spatialLayers.size() && slIdx < 4; ++slIdx) {
 			if ((bitmask & (1 << slIdx)) != 0) {
-				const auto& sl = stream.spatialLayers[slIdx];
+				const auto &sl = stream.spatialLayers[slIdx];
 				for (uint32_t bitrate : sl.targetBitratesKbps) {
 					writeLeb128(result, bitrate);
 				}
@@ -145,22 +145,22 @@ binary VideoLayersAllocation::generate(uint8_t streamIndex) const {
 	// Format: width-1 (2 bytes BE), height-1 (2 bytes BE), fps (1 byte)
 	for (size_t streamIdx = 0; streamIdx < numStreams; ++streamIdx) {
 		const auto bitmask = allSameBitmask ? slBm : slBitmasks[streamIdx];
-		const auto& stream = rtpStreams[streamIdx];
+		const auto &stream = rtpStreams[streamIdx];
 
 		for (size_t slIdx = 0; slIdx < stream.spatialLayers.size() && slIdx < 4; ++slIdx) {
 			if (bitmask & (1 << slIdx)) {
-				const auto& sl = stream.spatialLayers[slIdx];
+				const auto &sl = stream.spatialLayers[slIdx];
 				uint16_t width = std::max<uint32_t>(sl.width, 1u) - 1u;
 				uint16_t height = std::max<uint32_t>(sl.height, 1u) - 1u;
 
 				// Big endian width-1
-				result.push_back(std::byte((width >> 8) & 0xFF));
-				result.push_back(std::byte(width & 0xFF));
+				result.push_back(rtc::byte((width >> 8) & 0xFF));
+				result.push_back(rtc::byte(width & 0xFF));
 				// Big endian height-1
-				result.push_back(std::byte((height >> 8) & 0xFF));
-				result.push_back(std::byte(height & 0xFF));
+				result.push_back(rtc::byte((height >> 8) & 0xFF));
+				result.push_back(rtc::byte(height & 0xFF));
 				// Framerate
-				result.push_back(std::byte(sl.fps));
+				result.push_back(rtc::byte(sl.fps));
 			}
 		}
 	}

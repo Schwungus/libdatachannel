@@ -15,8 +15,8 @@
 namespace rtc {
 
 VP9RtpPacketizer::VP9RtpPacketizer(shared_ptr<RtpPacketizationConfig> rtpConfig,
-		size_t maxFragmentSize)
-	: RtpPacketizer(std::move(rtpConfig)), mMaxFragmentSize(maxFragmentSize) {}
+                                   size_t maxFragmentSize)
+    : RtpPacketizer(std::move(rtpConfig)), mMaxFragmentSize(maxFragmentSize) {}
 
 std::vector<binary> VP9RtpPacketizer::fragment(binary frame) {
 	/*
@@ -62,13 +62,13 @@ std::vector<binary> VP9RtpPacketizer::fragment(binary frame) {
 	 * bit 2 is the frame_type: 0 = KEY_FRAME, 1 = NON_KEY_FRAME.
 	 */
 	const uint8_t showExistingFrame = 0b00001000; // bit 3 (0x08)
-	const uint8_t frameTypeBit = 0b00000100;     // bit 2 (0x04)
+	const uint8_t frameTypeBit = 0b00000100;      // bit 2 (0x04)
 
 	if (frame.empty())
 		return {};
 
 	bool isInterFrame = false;
-	uint8_t firstFrameByte = std::to_integer<uint8_t>(frame[0]);
+	uint8_t firstFrameByte = frame[0];
 	if (!(firstFrameByte & showExistingFrame))
 		isInterFrame = (firstFrameByte & frameTypeBit) != 0;
 
@@ -94,7 +94,7 @@ std::vector<binary> VP9RtpPacketizer::fragment(binary frame) {
 			descriptor |= bitB;
 		if (isLast)
 			descriptor |= bitE;
-		payload[0] = std::byte(descriptor);
+		payload[0] = rtc::byte(descriptor);
 
 		// Copy frame data
 		std::memcpy(payload.data() + descriptorSize, frame.data() + index, payloadSize);

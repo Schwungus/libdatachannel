@@ -248,8 +248,8 @@ size_t WsTransport::parseFrame(byte *buffer, size_t size, Frame &frame) {
 		return 0;
 
 	byte *cur = buffer;
-	auto b1 = to_integer<uint8_t>(*cur++);
-	auto b2 = to_integer<uint8_t>(*cur++);
+	auto b1 = *cur++;
+	auto b2 = *cur++;
 
 	frame.fin = (b1 & 0x80) != 0;
 	frame.mask = (b2 & 0x80) != 0;

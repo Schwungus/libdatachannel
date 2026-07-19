@@ -144,7 +144,7 @@ void DtlsSrtpTransport::recvMedia(message_ptr message) {
 		return;
 	}
 
-	uint8_t value2 = to_integer<uint8_t>(*(message->begin() + 1)) & 0x7F;
+	uint8_t value2 = *(message->begin() + 1) & 0x7F;
 	PLOG_VERBOSE << "Demultiplexing SRTCP and SRTP with RTP payload type, value="
 	             << unsigned(value2);
 
@@ -206,7 +206,7 @@ bool DtlsSrtpTransport::demuxMessage(message_ptr message) {
 	// The process for demultiplexing a packet is as follows. The receiver looks at the first byte
 	// of the packet. [...] If the value is in between 128 and 191 (inclusive), then the packet is
 	// RTP (or RTCP [...]). If the value is between 20 and 63 (inclusive), the packet is DTLS.
-	uint8_t value1 = to_integer<uint8_t>(*message->begin());
+	uint8_t value1 = *message->begin();
 	PLOG_VERBOSE << "Demultiplexing DTLS and SRTP/SRTCP with first byte, value="
 	             << unsigned(value1);
 
@@ -266,7 +266,8 @@ void DtlsSrtpTransport::postHandshake() {
 
 	mbedtls_dtls_srtp_info srtpInfo;
 	mbedtls_ssl_get_dtls_srtp_negotiation_result(&mSsl, &srtpInfo);
-	if (srtpInfo.MBEDTLS_PRIVATE(chosen_dtls_srtp_profile) != MBEDTLS_TLS_SRTP_AES128_CM_HMAC_SHA1_80)
+	if (srtpInfo.MBEDTLS_PRIVATE(chosen_dtls_srtp_profile) !=
+	    MBEDTLS_TLS_SRTP_AES128_CM_HMAC_SHA1_80)
 		throw std::runtime_error("Failed to get SRTP profile");
 
 	const srtp_profile_t srtpProfile = srtp_profile_aes128_cm_sha1_80;

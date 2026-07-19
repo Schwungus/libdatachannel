@@ -36,7 +36,7 @@ private:
 	void incoming(message_ptr message) override;
 	bool sendHttpRequest();
 	string generateHttpRequest();
-	size_t parseHttpResponse(std::byte *buffer, size_t size);
+	size_t parseHttpResponse(rtc::byte *buffer, size_t size);
 
 	string mHostname;
 	string mService;

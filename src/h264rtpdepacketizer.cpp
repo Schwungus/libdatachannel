@@ -62,19 +62,18 @@ message_ptr H264RtpDepacketizer::reassemble(message_buffer &buffer) {
 		auto rtpHeaderSize = rtpHeader->getSize() + rtpHeader->getExtensionHeaderSize();
 		auto paddingSize = 0;
 		if (rtpHeader->padding())
-			paddingSize = std::to_integer<uint8_t>(packet->back());
+			paddingSize = packet->back();
 
 		if (packet->size() <= rtpHeaderSize + paddingSize)
 			continue; // Empty payload
 
-		auto nalUnitHeader = NalUnitHeader{std::to_integer<uint8_t>(packet->at(rtpHeaderSize))};
+		auto nalUnitHeader = NalUnitHeader{packet->at(rtpHeaderSize)};
 
 		if (nalUnitHeader.unitType() == naluTypeFUA) {
 			if (packet->size() <= rtpHeaderSize + paddingSize + 1)
 				continue; // Empty FU-A
 
-			auto nalUnitFragmentHeader =
-			    NalUnitFragmentHeader{std::to_integer<uint8_t>(packet->at(rtpHeaderSize + 1))};
+			auto nalUnitFragmentHeader = NalUnitFragmentHeader{packet->at(rtpHeaderSize + 1)};
 
 			// RFC 6184: When set to one, the Start bit indicates the start of a fragmented NAL
 			// unit. When the following FU payload is not the start of a fragmented NAL unit
@@ -107,8 +106,8 @@ message_ptr H264RtpDepacketizer::reassemble(message_buffer &buffer) {
 				auto offset = rtpHeaderSize + 1;
 
 				while (offset + 2 < packet->size() - paddingSize) {
-					auto naluSize = std::to_integer<uint16_t>(packet->at(offset)) << 8 |
-					                std::to_integer<uint16_t>(packet->at(offset + 1));
+					auto naluSize = static_cast<uint16_t>(packet->at(offset)) << 8 |
+					                static_cast<uint16_t>(packet->at(offset + 1));
 
 					offset += 2;
 

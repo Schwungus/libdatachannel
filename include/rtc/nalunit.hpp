@@ -13,8 +13,8 @@
 
 #include "common.hpp"
 
-#include <vector>
 #include <cassert>
+#include <vector>
 
 namespace rtc {
 
@@ -78,7 +78,7 @@ struct RTC_CPP_EXPORT NalUnit : binary {
 	};
 
 	static NalUnitStartSequenceMatch StartSequenceMatchSucc(NalUnitStartSequenceMatch match,
-	                                                 std::byte _byte, Separator separator);
+	                                                        rtc::byte _byte, Separator separator);
 
 	enum class Type { H264, H265 };
 

@@ -15,8 +15,8 @@
 namespace rtc {
 
 VP8RtpPacketizer::VP8RtpPacketizer(shared_ptr<RtpPacketizationConfig> rtpConfig,
-		size_t maxFragmentSize)
-	: RtpPacketizer(std::move(rtpConfig)), mMaxFragmentSize(maxFragmentSize) {}
+                                   size_t maxFragmentSize)
+    : RtpPacketizer(std::move(rtpConfig)), mMaxFragmentSize(maxFragmentSize) {}
 
 std::vector<binary> VP8RtpPacketizer::fragment(binary frame) {
 	/*
@@ -84,7 +84,7 @@ std::vector<binary> VP8RtpPacketizer::fragment(binary frame) {
 	if (frame.size() < 3)
 		return {};
 
-	const bool isKeyframe = (std::to_integer<uint8_t>(frame[0]) & P) == 0;
+	const bool isKeyframe = (frame[0] & P) == 0;
 
 	const size_t descriptorSize = 1;
 	if (mMaxFragmentSize <= descriptorSize)
@@ -104,7 +104,7 @@ std::vector<binary> VP8RtpPacketizer::fragment(binary frame) {
 			descriptor |= N;
 		if (index == 0)
 			descriptor |= S;
-		payload[0] = std::byte(descriptor);
+		payload[0] = rtc::byte(descriptor);
 
 		// Copy data
 		std::memcpy(payload.data() + descriptorSize, frame.data() + index, payloadSize);
