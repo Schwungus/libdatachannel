@@ -99,7 +99,7 @@ struct RTC_CPP_EXPORT RtcpReportBlock {
 	[[nodiscard]] uint32_t delaySinceSR() const;
 
 	[[nodiscard]] SSRC getSSRC() const;
-	[[nodiscard]] uint32_t getNTPOfSR() const;
+	[[nodiscard]] uint64_t getNTPOfSR() const;
 	[[nodiscard]] uint8_t getFractionLost() const;
 	[[nodiscard]] unsigned int getPacketsLostCount() const;
 
@@ -285,7 +285,7 @@ struct RTC_CPP_EXPORT RtcpRemb {
 	unsigned int getBitrate() const;
 
 	// Deprecated
-	[[deprecated("use setSSRC")]] void setSsrc(int num, SSRC newSssrc);
+	[[deprecated("use setSSRC")]] void setSsrc(int num, SSRC newSsrc);
 	[[deprecated("use getSSRCCount")]] unsigned int getNumSSRC() const;
 	[[deprecated("use getSSRCCount")]] unsigned int getNumSSRC();
 	unsigned int getBitrate();

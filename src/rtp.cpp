@@ -230,7 +230,7 @@ void RtcpReportBlock::setJitter(uint32_t jitter) { _jitter = htonl(jitter); }
 
 void RtcpReportBlock::setNTPOfSR(uint64_t ntp) { _lastReport = htonl((uint32_t)(ntp >> 16)); }
 
-uint32_t RtcpReportBlock::getNTPOfSR() const { return ntohl(_lastReport) << 16u; }
+uint64_t RtcpReportBlock::getNTPOfSR() const { return (uint64_t)ntohl(_lastReport) << 16u; }
 
 void RtcpReportBlock::setDelaySinceSR(uint32_t sr) {
 	// The delay, expressed in units of 1/65536 seconds
@@ -348,7 +348,7 @@ void RtcpSr::log() const {
 
 unsigned int RtcpSdesItem::Size(uint8_t textLength) { return textLength + 2; }
 
-std::string RtcpSdesItem::text() const { return std::string(_text, _length); }
+std::string RtcpSdesItem::text() const { return {_text, _length}; }
 
 void RtcpSdesItem::setText(std::string text) {
 	if (text.size() > 0xFF)
@@ -510,7 +510,7 @@ void RtcpSdes::preparePacket(uint8_t chunkCount) {
 		auto chunk = getChunk(i);
 		chunkSize += chunk->getSize();
 	}
-	uint16_t length = uint16_t((sizeof(header) + chunkSize) / 4 - 1);
+	auto length = uint16_t((sizeof(header) + chunkSize) / 4 - 1);
 	header.prepareHeader(202, chunkCount, length);
 }
 
@@ -737,7 +737,7 @@ bool RtcpNack::addMissingPacket(unsigned int *fciCount, uint16_t *fciPID, uint16
 	} else {
 		// TODO SPEED!
 		uint16_t blp = parts[(*fciCount) - 1].blp();
-		uint16_t newBit = uint16_t(1u << (missingPacket - (1 + *fciPID)));
+		auto newBit = uint16_t(1u << (missingPacket - (1 + *fciPID)));
 		parts[(*fciCount) - 1].setBlp(blp | newBit);
 		return false;
 	}
@@ -763,7 +763,7 @@ size_t RtcpApp::dataSize() const {
 
 void RtcpApp::preparePacket(SSRC ssrc, const RtcpAppName &name, uint8_t subtype,
                             size_t dataLength) {
-	uint16_t lengthField =
+	auto lengthField =
 	    uint16_t((sizeof(SSRC) + 4 + dataLength) / 4); // in 32-bit words, minus 1 for header
 	header.prepareHeader(204, subtype, lengthField);
 	setSSRC(ssrc);
@@ -790,7 +790,10 @@ size_t RtpRtx::getBodySize(size_t totalSize) const {
 	return totalSize - (getBody() - reinterpret_cast<const char *>(this));
 }
 
-size_t RtpRtx::getSize() const { return header.getSize() + sizeof(uint16_t); }
+size_t RtpRtx::getSize() const {
+	return static_cast<size_t>(header.getBody() - reinterpret_cast<const char *>(this)) +
+	       sizeof(uint16_t);
+}
 
 size_t RtpRtx::normalizePacket(size_t totalSize, SSRC originalSSRC, uint8_t originalPayloadType) {
 	if (totalSize < getSize())
@@ -799,12 +802,13 @@ size_t RtpRtx::normalizePacket(size_t totalSize, SSRC originalSSRC, uint8_t orig
 	header.setSeqNumber(getOriginalSeqNo());
 	header.setSsrc(originalSSRC);
 	header.setPayloadType(originalPayloadType);
-	memmove(header.getBody(), getBody(), totalSize - getSize());
+	memmove(header.getBody(), getBody(), getBodySize(totalSize));
 	return totalSize - 2;
 }
 
 size_t RtpRtx::copyTo(RtpHeader *dest, size_t totalSize, uint8_t originalPayloadType) {
-	memmove((char *)dest, (char *)this, header.getSize());
+	auto headerSize = static_cast<size_t>(header.getBody() - reinterpret_cast<const char *>(this));
+	memmove(dest, this, headerSize);
 	dest->setSeqNumber(getOriginalSeqNo());
 	dest->setPayloadType(originalPayloadType);
 	memmove(dest->getBody(), getBody(), getBodySize(totalSize));
